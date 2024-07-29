@@ -21,7 +21,7 @@ const authMiddleware = async (req, res, next) => {
     console.log(isVerified);
 
     // getting the complete user details & also we don't want password to be sent
-    const userData = await User.findOne({ email: isVerified.email }).select({
+    const userData = await User.findOne({ phone: isVerified.phone }).select({
       password: 0,
     });
 
