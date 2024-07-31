@@ -5,35 +5,33 @@ const authMiddleware = async (req, res, next) => {
   const token = req.header("Authorization");
 
   if (!token) {
-    // If you attempt to use an expired token, you'll receive a "401 Unauthorized HTTP" response.
-    return res
-      .status(401)
-      .json({ message: "Unauthorized HTTP, Token not provided" });
+    return res.status(401).json({ message: "Unauthorized HTTP, Token not provided" });
   }
 
-  // Assuming token is in the format "Bearer <jwtToken>, Removing the "Bearer" prefix"
-  const jwtToken = token.replace("Bearer", "").trim();
-  console.log(jwtToken);
+  const jwtToken = token.replace("Bearer ", "").trim();
+  console.log("JWT Token Received:", jwtToken);
 
   try {
-    // Verifying the token
-    const isVerified = jwt.verify(jwtToken, process.env.JWT_SECRET_KEY);
-    console.log(isVerified);
+    const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET_KEY);
+    console.log("Decoded Token:", decoded);
 
-    // getting the complete user details & also we don't want password to be sent
-    const userData = await User.findOne({ phone: isVerified.phone }).select({
-      password: 0,
-    });
+    const phoneNumber = decoded.phone;
+    console.log("Phone Number from Token:", phoneNumber);
 
-    console.log(userData)
+    const userData = await User.findOne({ phone: phoneNumber }).select("-password");
+    console.log("User Data Found:", userData);
+
+    if (!userData) {
+      return res.status(401).json({ message: "Unauthorized. User not found." });
+    }
 
     req.user = userData;
     req.token = token;
     req.userID = userData._id;
 
-    // Move on to the next middleware or route handler
     next();
   } catch (error) {
+    console.log("Error Verifying Token:", error.message);
     return res.status(401).json({ message: "Unauthorized. Invalid token." });
   }
 };

@@ -21,47 +21,51 @@ const userSchema = new mongoose.Schema({
     },
 });
 
-//? secure the password with the bcrypt
+// Secure the password with bcrypt
 userSchema.pre("save", async function(next) {
     const user = this;
 
-    if(!user.isModified("password")) {
-        next();
+    if (!user.isModified("password")) {
+        return next();
     }
 
     try {
         const saltRound = await bcrypt.genSalt(10);
         const hash_password = await bcrypt.hash(user.password, saltRound);
         user.password = hash_password;
-        console.log(user.password);
-    }catch(error) {
+        console.log("Hashed Password:", user.password);
+        next();
+    } catch (error) {
         next(error);
     }
 });
 
-// compare the password
+// Compare the password
 userSchema.methods.comparePassword = async function(password) {
     return bcrypt.compare(password, this.password);
 };
 
-// json web token
+// Generate JSON Web Token
 userSchema.methods.generateToken = async function() {
     try {
-        return jwt.sign({
+        const token = jwt.sign({
             userId: this._id.toString(),
+            phone: this.phone,
             isAdmin: this.isAdmin,
         },
         process.env.JWT_SECRET_KEY,
         {
             expiresIn: "30d",
-        }
-      );
+        });
+        console.log("Generated Token:", token);
+        return token;
     } catch (error) {
         console.error(error);
+        throw new Error("Token generation failed");
     }
 };
 
-//define the model or the collection name
-const User = new mongoose.model("User", userSchema);
+// Define the model or the collection name
+const User = mongoose.model("User", userSchema);
 
 module.exports = User;
